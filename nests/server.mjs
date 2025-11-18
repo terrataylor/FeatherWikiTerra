@@ -4,15 +4,16 @@ import { createServer } from "http";
 
 // == Configuration
 
-const userpass = null;
-// use the line bellow instead to enable basic authentication
-// const userpass = "user:pass"
+const userpass = process.env.WIKI_AUTH || null;
+// Set WIKI_AUTH environment variable to "username:password"
+// Or set it here: const userpass = "admin:featherwiki123";
+// Set to null to disable authentication (not recommended)
 
 // where the Feather Wiki file is located
-const wikifile = "index.html";
+const wikifile = "./featherwiki.html";
 
-const hostname = "localhost";
-const port = 4505;
+const hostname = process.env.RAILWAY_ENVIRONMENT ? "0.0.0.0" : "localhost";
+const port = process.env.PORT || 4505;
 
 // == Configuration End
 
@@ -54,15 +55,15 @@ function not_authorized(response) {
 
 const handler = async (request, response) => {
     if (userpass != null) {
-        const authorization = request.headers.get("Authorization");
+        const authorization = request.headers['authorization'];
         if (!authorization) {
-            return not_authorized();
+            return not_authorized(response);
         }
         const matchresult = /Basic (.*)/.exec(authorization);
         if (matchresult) {
-            const given_userpass = atob(matchresult[1]);
+            const given_userpass = Buffer.from(matchresult[1], 'base64').toString();
             console.log("Received Authorization:", given_userpass);
-            if (given_userpass !== userpass) return not_authorized();
+            if (given_userpass !== userpass) return not_authorized(response);
         }
     }
 

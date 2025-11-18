@@ -25,18 +25,18 @@ esbuild.build({
   write: false,
   bundle: true,
   minify: false,
-  watch: {
-    onRebuild(error, result) {
-      if (error) console.error('watch build failed:', error)
-      else {
-        handleBuildResult(result)
-          .catch((e) => {
-            console.error(e);
-            process.exit(1);
-          });
-      }
-    },
-  },
+  // watch: {
+  //   onRebuild(error, result) {
+  //     if (error) console.error('watch build failed:', error)
+  //     else {
+  //       handleBuildResult(result)
+  //         .catch((e) => {
+  //           console.error(e);
+  //           process.exit(1);
+  //         });
+  //     }
+  //   },
+  // },
   plugins: [],
   platform: 'browser',
   format: 'iife',
@@ -101,6 +101,29 @@ async function injectPackageJsonData (html) {
       html = html.replace(m.match, m.replace);
     });
   }
+
+  return localizeHtml(html);
+}
+
+async function localizeHtml(html) {
+  // Load English locale for development
+  const localesFilePath = path.resolve(process.cwd(), 'locales');
+  const englishFilePath = path.resolve(localesFilePath, 'en-US.json');
+  const englishFile = await fs.promises.readFile(englishFilePath, 'utf-8');
+  const english = JSON.parse(englishFile);
+  
+  const localeName = 'en-US';
+  html = html.replace(/\{\{localeName\}\}/g, localeName);
+
+  // Replace translation placeholders
+  Object.keys(english).forEach(key => {
+    const regex = new RegExp('\\{\\{translate: ?' + key + '\\}\\}', 'g');
+    let translation = (english[key] ?? '').replace(/(['"])/g, '\\$1'); // Escape quotes
+    if (key === 'javascriptRequired') {
+      translation = `<a href="https://src.feather.wiki/#browser-compatibility">${translation}</a>`;
+    }
+    html = html.replace(regex, translation);
+  });
 
   return writeHtmlOutput(html);
 }
